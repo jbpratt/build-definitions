@@ -7,7 +7,7 @@ require (
 	k8s.io/api v0.28.5
 	k8s.io/apimachinery v0.28.5
 	k8s.io/cli-runtime v0.24.3
-	k8s.io/klog/v2 v2.120.1
+	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
