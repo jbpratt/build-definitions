@@ -12,7 +12,7 @@ jobs:
         with:
           go-version-file: './task-generator/go.mod'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804
+        uses: golangci/golangci-lint-action@d09fb0808ae08b4310fe3140992ba2475deac1c0
         with:
           working-directory: task-generator
           args: "--timeout=10m --build-tags='normal periodic'"
