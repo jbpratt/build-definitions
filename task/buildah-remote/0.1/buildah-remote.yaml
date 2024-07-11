@@ -478,7 +478,7 @@ spec:
     - mountPath: /shared
       name: shared
   - computeResources: {}
-    image: registry.access.redhat.com/ubi9/python-39:1-172.1712567222@sha256:c96f839e927c52990143df4efb2872946fcd5de9e1ed2014947bb2cf3084c27a
+    image: registry.access.redhat.com/ubi9/python-39:1-186.1720018722@sha256:145f08b49fabbfec82c9042f6de0d3160c6005ecf700b7fcee3c482e24fd0bf6
     name: merge-syft-sboms
     script: |
       #!/bin/python3
@@ -527,7 +527,7 @@ spec:
       runAsUser: 0
     workingDir: $(workspaces.source.path)
   - computeResources: {}
-    image: registry.access.redhat.com/ubi9/python-39:1-172.1712567222@sha256:c96f839e927c52990143df4efb2872946fcd5de9e1ed2014947bb2cf3084c27a
+    image: registry.access.redhat.com/ubi9/python-39:1-186.1720018722@sha256:145f08b49fabbfec82c9042f6de0d3160c6005ecf700b7fcee3c482e24fd0bf6
     name: create-purl-sbom
     script: |
       #!/bin/python3

@@ -20,7 +20,7 @@ spec:
     default: []
   steps:
     - name: apply-additional-tags-from-parameter
-      image: registry.access.redhat.com/ubi9/skopeo:9.4-6@sha256:c4d70dec3eb0a0c831490192145ea25431fe04d1cf307f8d61e2d87adb41e7e3
+      image: registry.access.redhat.com/ubi9/skopeo:9.4-8.1719560853@sha256:13258db1645a87f4cea14f5564bc07f9ea3e70c3947c3ca1a87206876f964c4a
       args:
         - $(params.ADDITIONAL_TAGS[*])
       env:
@@ -40,7 +40,7 @@ spec:
         fi
 
     - name: apply-additional-tags-from-image-label
-      image: registry.access.redhat.com/ubi9/skopeo:9.4-6@sha256:c4d70dec3eb0a0c831490192145ea25431fe04d1cf307f8d61e2d87adb41e7e3
+      image: registry.access.redhat.com/ubi9/skopeo:9.4-8.1719560853@sha256:13258db1645a87f4cea14f5564bc07f9ea3e70c3947c3ca1a87206876f964c4a
       env:
       - name: IMAGE
         value: $(params.IMAGE)
