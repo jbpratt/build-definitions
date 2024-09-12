@@ -1,0 +1,193 @@
+---
+- op: replace
+  path: /metadata/name
+  value: dynamic-operator-bundle-build
+- op: replace
+  path: /metadata/labels
+  value:
+    "pipelines.openshift.io/used-by": "build-cloud"
+    "pipelines.openshift.io/runtime": "generic"
+    "pipelines.openshift.io/strategy": "docker"
+
+# TODO: set a description
+
+# Remove unused params from template
+# $ kustomize build ./pipelines/template-build/ | yq '.spec.params.[].name' | nl -v 0
+#     0	git-url
+#     1	revision
+#     2	output-image
+#     3	path-context
+#     4	dockerfile
+#     5	rebuild
+#     6	skip-checks
+#     7	hermetic
+#     8	prefetch-input
+#     9	image-expires-after
+#    10	build-source-image
+#    11	build-image-index
+
+- op: remove
+  path: /spec/params/11  # build-image-index
+- op: remove
+  path: /spec/params/10  # build-source-image
+- op: remove
+  path: /spec/params/8  # prefetch-input
+- op: remove
+  path: /spec/params/6  # skip-checks
+- op: remove
+  path: /spec/params/4 # dockerfile (set below directly to the generated path)
+- op: remove
+  path: /spec/params/3 # path-context (set below directly)
+- op: remove
+  path: /spec/tasks/0/params/2  # remove the skip-checks param
+
+# Add additional params
+- op: add
+  path: /spec/params/-
+  value:
+    name: channels
+    default: alpha
+    type: string
+    description: Comma-separated list of channels the bundle belongs to
+- op: add
+  path: /spec/params/-
+  value:
+    name: package-name
+    default: osd-example-operator # TODO: can I not set a default and force them to?
+    type: string
+    description: The bundle's package name
+- op: add
+  path: /spec/params/-
+  value:
+    name: kustomize-dir
+    default: config/manifests
+    type: string
+    description: Directory containing kustomize bases in a "bases" dir and a kustomization.yaml for operator-framework manifests
+- op: add
+  path: /spec/params/-
+  value:
+    name: extra-service-accounts
+    default: ""
+    type: string
+    description: Comma-seperated list of service account names, outside of the operator's Deployment account, that have bindings to {Cluster}Roles that should be added to the CSV
+
+# Remove unused tasks
+# $ kustomize build ./pipelines/dynamic-operator-bundle-build/ | yq '.spec.tasks.[].name' | nl -v 0
+#     0	init
+#     1	clone-repository
+#     2	prefetch-dependencies
+#     3	build-container
+#     4	build-image-index
+#     5	build-source-image
+#     6	deprecated-base-image-check
+#     7	clair-scan
+#     8	ecosystem-cert-preflight-checks
+#     9	sast-snyk-check
+#    10	clamav-scan
+#    11	apply-tags
+#    12	push-dockerfile
+- op: remove
+  path: /spec/tasks/5 # build-source-index
+
+# Add/replace tasks
+# replace prefetch-dependencies with get-operator-version
+# TODO: this needs to be in a trusted task
+- op: replace
+  path: /spec/tasks/2
+  value:
+    name: get-operator-version
+    runAfter:
+    - clone-repository
+    taskSpec:
+      results:
+      - name: version
+        description: current version of the operator
+      steps:
+      - name: get-operator-version
+        image: quay.io/redhat-services-prod/boilerplate/image:latest
+        workingDir: $(workspaces.source.path)/source
+        script: |
+          #!/usr/bin/env bash
+          make version > "$(results.version.path)"
+      workspaces:
+      - name: source
+    workspaces:
+    - name: source
+      workspace: workspace
+
+# replace build-container with operator-sdk-generate-bundle
+- op: replace
+  path: /spec/tasks/3
+  value:
+    name: operator-sdk-generate-bundle
+    runAfter:
+    - get-operator-versions
+    params:
+    - name: version
+      value: $(tasks.get-operator-version.results.version)
+    taskRef:
+      name: operator-sdk-generate-bundle
+      version: "0.1"
+    workspaces:
+    - name: source
+      workspace: workspace
+
+# replace build-image-index with build-container
+- op: replace
+  path: /spec/tasks/4
+  value:
+    name: build-container
+    runAfter:
+    - operator-sdk-generate-bundle
+    taskRef:
+      name: buildah
+      version: "0.2"
+    params:
+    - name: IMAGE
+      value: $(params.output-image)
+    - name: DOCKERFILE
+      value: bundle.Dockerfile
+    - name: CONTEXT
+      value: .
+    - name: HERMETIC
+      value: "$(params.hermetic)"
+    - name: IMAGE_EXPIRES_AFTER
+      value: "$(params.image-expires-after)"
+    - name: COMMIT_SHA
+      value: "$(tasks.clone-repository.results.commit)"
+    workspaces:
+    - name: source
+      workspace: workspace
+
+# Remove unused workspaces
+- op: remove
+  path: /spec/workspaces/2  # netrc (only used for prefetch-dependencies)
+
+# Replace runAfter for subsequent tasks
+- op: replace
+  path: /spec/tasks/5/runAfter/0 # deprecated-base-image-check
+  value: build-container
+
+- op: replace
+  path: /spec/tasks/6/runAfter/0 # clair-scan
+  value: build-container
+
+- op: replace
+  path: /spec/tasks/7/runAfter/0 # ecosystem-cert-preflight-checks
+  value: build-container
+
+- op: replace
+  path: /spec/tasks/8/runAfter/0 # sast-snyk-check
+  value: build-container
+
+- op: replace
+  path: /spec/tasks/9/runAfter/0 # clamav-scan
+  value: build-container
+
+- op: replace
+  path: /spec/tasks/10/runAfter/0 # apply-tags
+  value: build-container
+
+- op: replace
+  path: /spec/tasks/11/runAfter/0 # push-dockerfile
+  value: build-container
